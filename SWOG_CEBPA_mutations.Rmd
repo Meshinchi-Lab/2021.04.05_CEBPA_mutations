@@ -1,0 +1,131 @@
+---
+title: "CEBPA in SWOG RNA-seq"
+author: "Jenny Smith"
+date: "4/5/2021"
+output: html_document
+---
+
+# Set-up 
+
+```{r setup, cache = FALSE, include = FALSE}
+require(knitr)
+knitr::opts_knit$set(root.dir = file.path(SWOG,"RNA/mRNAseq/analysis/2021.04.05_CEBPA_mutations"))
+```
+
+```{r}
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=50),
+                      tidy=TRUE,
+                      fig.align='center',
+                      fig.width = 10, fig.height = 10)
+node=Sys.info()[["nodename"]]
+if(!grepl("local", node)){
+  print(node)
+  options(bitmapType = 'cairo')
+  grDevices::X11.options(type='cairo')
+}
+
+options(stringsAsFactors = FALSE)
+table = function (..., useNA = 'ifany') base::table(..., useNA = useNA)
+```
+
+```{r message = FALSE, warning=FALSE}
+library(stringr)
+library(magrittr)
+
+library(ggplot2)
+library(gridExtra)
+
+library(dplyr)
+library(tidyr)
+library(tibble)
+
+
+library(DeGSEA)
+
+getwd()
+```
+
+
+#Raw Counts
+
+
+#ClinData
+
+```{r}
+CEBPA <- openxlsx::read.xlsx("CEBPA.xlsx")
+
+
+head(CEBPA)
+dim(CEBPA) #80 by 133
+```
+
+```{r}
+sample_info <- read.csv(file.path(SWOG, "RNA/mRNAseq/metadata/SWOG_AML_Kallisto_Quant_Gencode_v29_RepBase_v24.01_Sample_IDmap.csv")) %>% 
+  rename_at(vars(filename), ~c("fastq_filename"))
+
+head(sample_info)
+dim(sample_info) #320  18
+```
+
+# Define Samples 
+
+
+```{r}
+table(duplicated(colnames(CEBPA)))
+table(duplicated(CEBPA$SampleID)) #34 unique samples
+# length(unique(CEBPA$SampleID)) #34 
+```
+
+```{r}
+CEBPA.withRNAseq <- CEBPA %>% 
+  as.tibble(., .name_repair="unique") %>% 
+  dplyr::mutate(SWOGID=gsub("IR","", SampleID)) %>% 
+  inner_join(., sample_info, by="SWOGID") %>% 
+  select(SampleID, SWOGID, fastq_filename, Sample_Type, everything()) %>% 
+  distinct()
+
+#this is very messy data - its got many many duplicate samples per row. will need to clean 
+CEBPA.withRNAseq
+# table(duplicated(CEBPA.withRNAseq$SWOGID)) 
+# length(unique(CEBPA.withRNAseq$SWOGID)) #17 samples
+```
+
+```{r}
+CEBPA[CEBPA$SampleID=="IR2005-05511",]
+filter(CEBPA.withRNAseq, SWOGID=="200,5-05511")
+filter(sample_info, SWOGID=="2005-05511")
+```
+```{r}
+CEBPA.withRNAseq
+```
+
+```{r}
+sample_types <- CEBPA.withRNAseq %>% 
+  select(Gene.refGene, SWOGID, Sample_Type) %>% 
+  distinct() %>% 
+  group_by(Gene.refGene, Sample_Type) %>% 
+  count() %>% 
+  ungroup() 
+
+
+sample_types
+```
+
+
+#Unsupervised Clustering
+
+
+
+#Perform Differential Expression
+
+
+
+#QC Plots 
+
+
+#Session Information
+
+```{r}
+sessionInfo()
+```
+
